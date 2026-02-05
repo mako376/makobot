@@ -30,7 +30,7 @@ jobs:
 
       - name: Lint with Ruff
         run: |
-          ruff check . --output-format=text
+          ruff check . --output-format=github
           # Optional: fail on lint errors
           # ruff check . --exit-non-zero-on-fix
 
