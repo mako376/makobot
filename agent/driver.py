@@ -5,13 +5,13 @@ Runs the conversation loop, dispatches tools, manages memory, and enforces workf
 """
 
 import os
-import sys
 import json
 import time
+from datetime import datetime
 from pathlib import Path
 from openai import OpenAI
 
-from agent.config import MODEL, TEMPERATURE, ENABLE_AUTOMERGE, CONFIRM_PR_CREATION, ENDPOINT_URL, BEARER_TOKEN
+from agent.config import MODEL, TEMPERATURE, ENABLE_AUTOMERGE, ENDPOINT_URL, BEARER_TOKEN
 from agent.prompts import SYSTEM_PROMPT
 from agent.tools import ALL_TOOLS, execute_tool
 
@@ -23,6 +23,7 @@ MEMORY_DIR = REPO_ROOT / "memory"
 GOALS_FILE = MEMORY_DIR / "goals.json"
 RELIABILITY_FILE = MEMORY_DIR / "tool-reliability.json"
 PERF_LOG = REPO_ROOT / "performance.log"
+LLM_LOG = MEMORY_DIR / "llm-calls.log.jsonl"
 
 # Ensure directories exist
 MEMORY_DIR.mkdir(exist_ok=True)
@@ -97,6 +98,9 @@ def main():
                 # if turn_count % 40 == 0:
                 #     summarize_and_restart_context(messages)
 
+                start_time = time.time()
+                call_time = datetime.utcnow().isoformat() + "Z"
+
                 response = client.chat.completions.create(
                     model=MODEL,
                     messages=messages,
@@ -105,13 +109,6 @@ def main():
                     max_tokens=4096,  # adjust based on model
                     # stream=False     # or True for streaming if you want
                 )
-                #response = ollama.chat(
-                #    model=MODEL,
-                #    messages=messages,
-                #    tools=ALL_TOOLS,
-                #    options={"temperature": TEMPERATURE},
-                    # api_base=OLLAMA_API_BASE  # if needed for custom setup
-                #)
 
                 # Extract the assistant message (OpenAI format)
                 msg_content = response.choices[0].message.content
@@ -121,6 +118,7 @@ def main():
                     "role": "assistant",
                     "content": msg_content,
                 }
+
                 if tool_calls:
                     msg["tool_calls"] = [
                         {
@@ -132,6 +130,28 @@ def main():
                             }
                         } for tc in tool_calls
                     ]
+                
+                duration = time.time() - start_time
+                log_entry = {
+                    "timestamp": call_time,
+                    "turn_id": turn_count,
+                    "model": MODEL,                    # from router
+                    "endpoint": ENDPOINT_URL,
+                    "messages_count": len(messages),
+                    "input_tokens": response.usage.prompt_tokens if hasattr(response.usage, 'prompt_tokens') else None,
+                    "output_tokens": response.usage.completion_tokens if hasattr(response.usage, 'completion_tokens') else None,
+                    "temperature": TEMPERATURE,
+                    "duration_sec": round(duration, 3),
+                    "tool_calls": len(msg.get("tool_calls", [])),
+                    "success": True,
+                    "error": None,
+                    "goal_id": goal_memory.get("current_focus"),
+                    "user_prompt_snippet": messages[-1]["content"][:120] + "..." if messages else "",
+                    "response_snippet": msg["content"][:120] + "..." if "content" in msg else ""
+                }
+
+                with open(LLM_LOG, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(log_entry) + "\n")
 
                 messages.append(msg)
 
