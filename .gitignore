@@ -2,6 +2,7 @@
 .env
 *.jsonl
 .secrets
+memory/*.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

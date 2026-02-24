@@ -23,8 +23,9 @@ def write_memory_file(path: str, content: str) -> str:
     if path not in allowed_paths:
         return f"Security error: Cannot write to {path}"
 
+    mode = "a" if path == "notes.md" else "w"
     try:
-        with open(f"memory/{path}", "w") as f:
+        with open(f"memory/{path}", mode) as f:
             f.write(content)
         return f"Wrote to memory/{path} successfully"
     except Exception as e:
