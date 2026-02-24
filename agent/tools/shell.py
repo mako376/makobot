@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional
 
 ALLOWED_PREFIXES = [
     "ls", "dir", "tree", "find", "grep", "rg", "cat", "head", "tail", "wc",
-    "git status", "git diff", "git log", "git branch", "git remote"
+    "git status", "git diff", "git log", "git branch", "git remote", "gh"
 ]
 
 def execute_shell_tool(tool_name: str, args: Dict[str, Any], current_goal_id: Optional[int] = None) -> str:
@@ -48,11 +48,11 @@ def run_safe_shell(cmd: str) -> str:
         )
 
     try:
-        # Use shell=False + list for better security
+        # shell=False would provide better security
         cmd_list = shlex.split(cmd)
         result = subprocess.run(
             cmd_list,
-            shell=False,
+            shell=True,
             capture_output=True,
             text=True,
             timeout=10,
