@@ -10,7 +10,6 @@ import sys
 import time
 import warnings
 from datetime import datetime, timezone
-from pathlib import Path
 #from openai import OpenAI
 from litellm import completion
 
@@ -76,7 +75,7 @@ def load_code_context(root_dir="."):
                 continue
 
             # Check file extension
-            if not os.path.splitext(filename)[1].lower() in CODE_EXTENSIONS:
+            if os.path.splitext(filename)[1].lower() not in CODE_EXTENSIONS:
                 continue
 
             try:
@@ -118,7 +117,7 @@ def main():
     # Optional: inject current goals / repo map into first message
     messages[0]["content"] += f"\n\nCurrent goals overview:\n{json.dumps(goal_memory, indent=2)} \n\nSource code: {json.dumps(code_context, indent=2)} "
 
-    print(f"Characters in current context: " + str(len(messages[0]["content"])))
+    print("Characters in current context: " + str(len(messages[0]["content"])))
 
     print("\nAgent ready. Type your request (or 'quit'):\n")
     
