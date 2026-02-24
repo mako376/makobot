@@ -14,7 +14,7 @@ from pathlib import Path
 #from openai import OpenAI
 from litellm import completion
 
-from agent.config import MODEL, TEMPERATURE, ENABLE_AUTOMERGE, ENDPOINT_URL, BEARER_TOKEN
+from agent.config import MODEL, TEMPERATURE, ENABLE_AUTOMERGE, ENDPOINT_URL, BEARER_TOKEN, REPO_ROOT
 from agent.prompts import SYSTEM_PROMPT
 from agent.tools import ALL_TOOLS, execute_tool
 
@@ -22,7 +22,6 @@ from agent.tools import ALL_TOOLS, execute_tool
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 # ─── Constants & Paths ─────────────────────────────────────────────────────
-REPO_ROOT = Path.home() / "makobot"
 os.chdir(REPO_ROOT)
 
 MEMORY_DIR = REPO_ROOT / "memory"
@@ -46,6 +45,48 @@ def save_goals(data):
         json.dump(data, f, indent=2)
 
 goal_memory = load_goals()
+
+def load_code_context(root_dir="."):
+    """Recursively load code files from directory into memory"""
+    code_context = {}
+
+    # Common code file extensions to include
+    CODE_EXTENSIONS = {
+        '.py', '.js', '.jsx', '.ts', '.tsx',
+        '.java', '.cpp', '.h', '.cs', '.rb',
+        '.go', '.php', '.swift', '.m', '.mm',
+        '.rs', '.lua', '.pl', '.sh', '.bat',
+        '.json', '.yaml', '.yml', '.xml',
+        '.html', '.css', '.less', '.sass', '.scss'
+    }
+
+    for dirpath, _, filenames in os.walk(root_dir):
+        # Skip common ignored directories
+        if any(part in ['__pycache__', '.git', '.svn', '.hg', '.bzr', '_darcs', '.tox',
+                      '.env', 'venv', 'node_modules', 'bower_components']
+               for part in dirpath.split(os.sep)):
+            continue
+
+        for filename in filenames:
+            file_path = os.path.join(dirpath, filename)
+
+            # Skip very large files (adjust threshold as needed)
+            if os.path.getsize(file_path) > 10 * 1024 * 1024:  # 10MB
+                print(f"Skipping large file: {file_path}")
+                continue
+
+            # Check file extension
+            if not os.path.splitext(filename)[1].lower() in CODE_EXTENSIONS:
+                continue
+
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                    code_context[file_path] = f.read()[:1000]
+            except Exception as e:
+                print(f"Error reading {file_path}: {str(e)}")
+
+    return code_context
+code_context = load_code_context()
 
 # ─── Tool Reliability Stub (expand later) ──────────────────────────────────
 def record_tool_reliability(tool_name, goal_id, success, helpfulness, notes=""):
@@ -75,7 +116,9 @@ def main():
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
     # Optional: inject current goals / repo map into first message
-    messages[0]["content"] += f"\n\nCurrent goals overview:\n{json.dumps(goal_memory, indent=2)}"
+    messages[0]["content"] += f"\n\nCurrent goals overview:\n{json.dumps(goal_memory, indent=2)} \n\nSource code: {json.dumps(code_context, indent=2)} "
+
+    print(f"Characters in current context: " + str(len(messages[0]["content"])))
 
     print("\nAgent ready. Type your request (or 'quit'):\n")
     
@@ -117,6 +160,7 @@ def main():
                 # proper tool calls
                 tool_calls = response.choices[0].message.tool_calls
                 if tool_calls:
+                    print("✅ Tool calls correctly placed in the API response")
                     msg["tool_calls"] = [
                         {
                             "id": tc.id,
@@ -129,23 +173,32 @@ def main():
                     ]
 
                 # manually parsing tool calls from content
-                msg = response.choices[0].message  
+                msg = response.choices[0].message
                 if not hasattr(msg, "tool_calls") or not msg.tool_calls:
                     content = msg.content or ""
+                    # Check for JSON content with tool_calls
                     if content.strip().startswith("{") and "tool_calls" in content:
                         try:
                             parsed = json.loads(content)
-                            if "tool_calls" in parsed:
-
+                            # Validate required structure
+                            if "tool_calls" in parsed and isinstance(parsed["tool_calls"], list):
                                 for tc in parsed["tool_calls"]:
-                                    tc["tool_call_id"] = tc["id"]
+                                    if not all(k in tc for k in ["id", "type", "function"]):
+                                        raise ValueError("Invalid tool_call structure")
+                                    msg.tool_calls = parsed["tool_calls"]
+                                    print("(neutral) Successfully parsed tool_calls from content")
+                            else:
+                                raise ValueError("Missing or invalid tool_calls array")
+                        except json.JSONDecodeError as e:
+                            print(f"❌ JSON decode error: {e}")
+                            print(f"Raw content: {content}")
+                        except ValueError as e:
+                            print(f"❌ Tool call validation failed: {e}")
+                            print(f"Raw content: {content}")
+                    else:
+                        # Fallback for non-JSON responses
+                        msg.tool_calls = []
 
-                                # Manually inject into message for downstream code
-                                msg.tool_calls = parsed["tool_calls"]
-                                print("Manually parsed tool_calls from content")
-                        except json.JSONDecodeError:
-                            pass
-                
                 duration = time.time() - start_time
                 log_entry = {
                     "timestamp": call_time,

@@ -13,7 +13,7 @@ To install Makobot on your local machine, follow the steps below:
 
 ### Prerequisites
 
-Ensure you have Python 3.8 or later installed along with Git and a basic understanding of GitHub workflows.
+Ensure you have Python 3.8 or later installed along with pip, venv, Git and a basic understanding of GitHub workflows.
 
 1. **Clone the Repository**:
 Clone the `makobot` repository from its GitHub location.
