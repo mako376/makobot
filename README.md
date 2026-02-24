@@ -7,6 +7,78 @@ Autonomous coding agent that lives inside its own Git monorepo.
 **Core Purpose**  
 A self-hosted, fully local, controllable AI agent that lives inside its own Git monorepo (`https://github.com/weex/makobot`). It uses LLMs to collaboratively build, refactor, test, and maintain codebases while also maintaining and improving **itself** (its driver code, tools, memory, and performance). The agent follows strict discipline: tiny atomic PRs, test-first mindset, branch isolation, CI-as-gatekeeper, and human oversight only at critical points.
 
+## Installation
+
+To install Makobot on your local machine, follow the steps below:
+
+### Prerequisites
+
+Ensure you have Python 3.8 or later installed along with Git and a basic understanding of GitHub workflows.
+
+1. **Clone the Repository**:
+Clone the `makobot` repository from its GitHub location.
+
+   ```bash
+   git clone https://github.com/weex/makobot.git
+   cd makobot
+   ```
+
+2. **Create Python Virtual Environment**:
+It's recommended to work in a virtual environment to avoid dependency conflicts.
+
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+   ```
+
+3. **Install Dependencies**:
+Install the required Python packages listed in `requirements.txt`.
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure Environment Variables**:
+Set up environment variables necessary for the agent to function correctly.
+
+   ```ini
+   # Example .env file
+   MODEL=your_preferred_model
+   TEMP=0.7  # or preferred value
+   GITHUB_TOKEN=<YourGitHubToken>  # For CI/CD interaction
+   ENABLE_AUTOMERGE=False  # Or True if you trust the auto-merge feature
+   ```
+
+5. **Initialize and Run Makobot**:
+Start the agent by running the driver script.
+
+   ```bash
+   run_agent.sh
+   ```
+
+6. **Setting Up GitHub Repository for CI/CD**:
+   - Ensure your repository is set up with branch protection rules on `main` to require pull requests.
+   - Add a `.github/workflows/ci.yml` file if not present, which should integrate with GitHub Actions to run
+tests and enforce coverage requirements.
+
+7. **Optional Enhancements (Future Work)**:
+   - For deeper profiling or integrating external services like MCP, refer to the "Still Open / Future Levers"
+section in this README for instructions.
+
+### Notes
+
+- Makobot runs fully locally but interacts with its GitHub repository for code review and merging. Ensure you
+have network access to GitHub when running the agent if needed.
+
+- **Important**: Never set `ENABLE_AUTOMERGE` to True unless you thoroughly understand and trust the
+self-improvement process of the AI agent. Always manually inspect PRs before allowing them to merge
+automatically.
+
+This installation guide sets up Makobot in a basic environment. For more advanced configurations or
+customization, refer to the detailed documentation within each module directory (`agent/`, `memory/`) for
+specific functions and variables.
+
+
 **Key Design & Workflow Choices**
 
 - **Always branch-based**: Every task starts with `git_create_branch_and_push` → semantic branch name (`feat/…`, `fix/…`, `refactor/…`). No direct pushes to `main`.
