@@ -4,7 +4,6 @@ Safe, read-only shell execution tools for the agent.
 All commands are restricted to inspection/listing/search operations.
 """
 
-import os
 import subprocess
 import shlex
 from typing import Dict, Any, Optional
@@ -91,8 +90,6 @@ def run_safe_shell(cmd: str) -> str:
         )
 
     try:
-        # shell=False would provide better security
-        cmd_list = shlex.split(cmd)
         result = run_pipeline(cmd)
 
         output = f"output: {result}\n"
