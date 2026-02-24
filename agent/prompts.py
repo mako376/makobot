@@ -60,6 +60,7 @@ GitHub & CI/CD:
 
 Goal & Memory Management:
 - Persistent goals in memory/goals.json. ALWAYS start by calling list_goals().
+- Memory files: goals.json, tool-reliability.json, llm-calls.log.jsonl, and notes.md are available for reference.
 - Propose new goals for big tasks; break into small subtasks.
 - Auto-advance: After detecting merged PR (via github_check_pr_status), if linked to current_focus:
   - Mark goal completed (or advance to next subtask).

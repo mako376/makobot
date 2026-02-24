@@ -15,7 +15,9 @@ ALL_TOOLS.extend(RELIABILITY_TOOLS)
 ALL_TOOLS.extend([MEMORY_TOOL])
 
 def execute_tool(name: str, args: dict, current_goal_id=None):
-    if name in [t["function"]["name"] for t in RELIABILITY_TOOLS]:
+    if name == "write_memory_file":
+        return execute_memory_tool("write_memory_file", args)
+    elif name in [t["function"]["name"] for t in RELIABILITY_TOOLS]:
         return execute_reliability_tool(name, args, current_goal_id)
     elif name in [t["function"]["name"] for t in LLM_LOG_TOOLS]:
         return execute_llm_log_tool(name, args, current_goal_id)
@@ -23,6 +25,4 @@ def execute_tool(name: str, args: dict, current_goal_id=None):
         return execute_shell_tool(name, args, current_goal_id)
     elif name in [t["function"]["name"] for t in GITHUB_TOOLS]:
         return execute_github_tool(name, args, current_goal_id)
-    elif name == "write_memory_file":
-        return execute_memory_tool("write_memory_file", args)
     return f"Tool '{name}' not implemented in any module yet."

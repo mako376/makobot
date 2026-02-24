@@ -6,6 +6,7 @@ Runs the conversation loop, dispatches tools, manages memory, and enforces workf
 
 import os
 import json
+import re
 import sys
 import time
 import warnings
@@ -32,7 +33,7 @@ LLM_LOG = MEMORY_DIR / "llm-calls.log.jsonl"
 # Ensure directories exist
 MEMORY_DIR.mkdir(exist_ok=True)
 
-# ─── Goal Memory Helpers (stub – expand later) ─────────────────────────────
+# ─── Helpers ─────────────────────────────
 def load_goals():
     if GOALS_FILE.exists():
         with open(GOALS_FILE, "r", encoding="utf-8") as f:
@@ -86,6 +87,11 @@ def load_code_context(root_dir="."):
 
     return code_context
 code_context = load_code_context()
+
+def remove_tool_calls(text):
+    # Remove tool_call blocks (including JSON and markers)
+    pattern = r'<tool_call>.*?</tool_call>'
+    return re.sub(pattern, '', text, flags=re.DOTALL)
 
 # ─── Tool Reliability Stub (expand later) ──────────────────────────────────
 def record_tool_reliability(tool_name, goal_id, success, helpfulness, notes=""):
@@ -176,6 +182,7 @@ def main():
                 if not hasattr(msg, "tool_calls") or not msg.tool_calls:
                     content = msg.content or ""
                     # Check for JSON content with tool_calls
+                    content = remove_tool_calls(content)
                     if content.strip().startswith("{") and "tool_calls" in content:
                         try:
                             parsed = json.loads(content)
